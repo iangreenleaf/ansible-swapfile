@@ -4,7 +4,7 @@
   register: swap_stat
 
 - name: Get remaining disk space
-  shell: df . --output=avail | grep -vi avail
+  shell: df --portability . | awk '$4 ~ /[0-9]+/ { print $4 }'
   register: available_space
 - set_fact: available_space={{ available_space.stdout_lines[0] | int }}
 

@@ -4,7 +4,7 @@
   register: swap_stat
 
 - name: Get remaining disk space
-  shell: df --portability --block-size=1 . | awk '$4 ~ /[0-9]+/ { print $4 }'
+  shell: df --portability --block-size=1 {{swapfile_location|dirname}} | awk '$4 ~ /[0-9]+/ { print $4 }'
   register: available_space
 
 - set_fact: available_space={{ available_space.stdout_lines[0] | int }}

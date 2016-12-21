@@ -4,25 +4,22 @@
   register: swap_stat
 
 - name: Get remaining disk space
-  shell: df . --output=avail | grep -vi avail
+  shell: df . --output=avail --block-size=1 | grep -vi avail
   register: available_space
+
 - set_fact: available_space={{ available_space.stdout_lines[0] | int }}
 
-- name: Convert requested space to kilobytes
-  command: numfmt --from=si --suffix=B --padding=7 {{ swapfile_size }}
-  register: requested_space
+- set_fact: requested_space={{ swapfile_size | human_to_bytes }}
 
-- set_fact: requested_space={{ (requested_space.stdout_lines[0] | regex_replace('B', '') | int) / 1000}}
-
-- set_fact: swap_size={{ (swap_stat.stat.size | int)/1000 }}
+- set_fact: swap_size={{ swap_stat.stat.size | int }}
   when: swap_stat.stat.size is defined
 
 - name: Check requested size against remaining space and swap exists
-  fail: msg="{{requested_space}} bytes exceeds {{available_space|int + swap_size|int}} bytes for swap creation."
+  fail: msg="{{requested_space | human_readable(unit='M')}} exceeds {{(available_space|int + swap_size|int) | human_readable(unit='M')}} available for swap creation."
   when: swap_stat.stat.exists == true and (((available_space|int) + (swap_size|int) - (requested_space|int)) < 0)
 
 - name: Check requested size against remaining space and swap does not exist
-  fail: msg="{{requested_space}} bytes exceeeds {{available_space}} bytes for swap creation."
+  fail: msg="{{requested_space | human_readable(unit='M')}} exceeds {{available_space | human_readable(unit='M')}} available for swap creation."
   when: swap_stat.stat.exists == false and (((available_space|int) - (requested_space|int)) < 0)
 
 - name: Turn swap off
@@ -40,7 +37,7 @@
 - name: Write swapfile
   command: |
     {% if swapfile_use_dd %}
-    dd if=/dev/zero of={{ swapfile_location }} bs=1M count={{ swapfile_size }} creates={{ swapfile_location }}
+    dd if=/dev/zero of={{ swapfile_location }} bs=1M count={{ requested_space }} creates={{ swapfile_location }}
     {% else %}
     fallocate -l {{ swapfile_size }} {{ swapfile_location }} creates={{ swapfile_location }}
     {% endif %}

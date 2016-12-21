@@ -4,7 +4,7 @@
   register: swap_stat
 
 - name: Get remaining disk space
-  shell: df . --output=avail | grep -vi avail
+  shell: df {{swapfile_location|dirname}} --output=avail | grep -vi avail
   register: available_space
 - set_fact: available_space={{ available_space.stdout_lines[0] | int }}
 
